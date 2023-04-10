@@ -65,11 +65,13 @@ class App {
   #map;
   #mapEvent;
   #workouts = [];
+  #mapZoomLevel = 13;
 
   constructor() {
     this._getPosition();
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField.bind(this));
+    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this))
   }
 
   _getPosition() {
@@ -90,7 +92,7 @@ class App {
     // we will use LEAFLET - JS Library for Mobile-Friendly Interactive Maps
     // Leaflet js works for openstreetmap, also for any other kind of maps (Google maps for e.)
 
-    this.#map = L.map('map').setView(coords, 13); // first arg are coordinates, second (number 13) is zoom-in out to map
+    this.#map = L.map('map').setView(coords, this.#mapZoomLevel); // first arg are coordinates, second (number 13) is zoom-in out to map
 
     // console.log(map)
 
@@ -162,13 +164,13 @@ class App {
       workout = new Cycling([lat, lng], distance, duration, elevation);
     }
 
-    console.log(workout);
     // add new object to workout array
     this.#workouts.push(workout);
 
     // render workout on map as marker
     this._renderWorkoutMarker(workout);
 
+    // render workout as list element
     this._renderWorkout(workout);
 
     // Clear input fields
@@ -198,6 +200,28 @@ class App {
       .openPopup(); // function that on click opens our pop up content
   }
 
+  _moveToPopup(e){
+
+    // creating method to move marker with animation on the Map when we pick element from the list
+
+    const workoutElement = e.target.closest('.workout'); // select parent element
+    
+    if(!workoutElement) return; // if doesn't exist, close function
+    
+    const workout = this.#workouts.find(wo => wo.id === workoutElement.dataset.id); // find element from the list which id is equal to dataset-id of an element
+    
+    // render it on map with given coordinates
+    // setView() is built in function of Leaflet JS
+   
+    this.#map.setView(workout.coords, this.#mapZoomLevel, {
+      animate: true,
+      pan:{
+        duration: 1
+      }
+    })
+    
+  }
+
   _renderWorkout(workout) {
     const html = `
     <li class="workout workout--${workout.type}" data-id=${workout.id}>
@@ -222,9 +246,7 @@ class App {
                 : workout.speed.toFixed(1)
             }</span>
             <span class="workout__unit">${
-              workout.type === 'running'
-                ? 'min/km'
-                : 'km/h'
+              workout.type === 'running' ? 'min/km' : 'km/h'
             }</span>
           </div>
           <div class="workout__details">
@@ -237,11 +259,7 @@ class App {
                 : workout.elevationGain
             }</span>
             <span class="workout__unit">
-            ${
-              workout.type === 'running'
-                ? 'spm'
-                : 'm'
-            }</span>
+            ${workout.type === 'running' ? 'spm' : 'm'}</span>
           </div>
         </li>
     `;
