@@ -68,10 +68,17 @@ class App {
   #mapZoomLevel = 13;
 
   constructor() {
+    // Load MAP
     this._getPosition();
+
+    // Load LocalStorage Data
+
+    this._getFromLocalStorage();
+
+    // Event Handlers
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField.bind(this));
-    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this))
+    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
   }
 
   _getPosition() {
@@ -94,7 +101,9 @@ class App {
 
     this.#map = L.map('map').setView(coords, this.#mapZoomLevel); // first arg are coordinates, second (number 13) is zoom-in out to map
 
-    // console.log(map)
+    // if there is data in #workouts, saved in LocalStorage
+    // we will go through list and render its marker position
+    this.#workouts.forEach(wo => this._renderWorkoutMarker(wo));
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
@@ -173,6 +182,10 @@ class App {
     // render workout as list element
     this._renderWorkout(workout);
 
+    // save data to local storage
+
+    this._saveToLocalStorage();
+
     // Clear input fields
     inputDistance.value =
       inputCadence.value =
@@ -200,26 +213,43 @@ class App {
       .openPopup(); // function that on click opens our pop up content
   }
 
-  _moveToPopup(e){
-
+  _moveToPopup(e) {
     // creating method to move marker with animation on the Map when we pick element from the list
 
     const workoutElement = e.target.closest('.workout'); // select parent element
-    
-    if(!workoutElement) return; // if doesn't exist, close function
-    
-    const workout = this.#workouts.find(wo => wo.id === workoutElement.dataset.id); // find element from the list which id is equal to dataset-id of an element
-    
+
+    if (!workoutElement) return; // if doesn't exist, close function
+
+    const workout = this.#workouts.find(
+      wo => wo.id === workoutElement.dataset.id
+    ); // find element from the list which id is equal to dataset-id of an element
+
     // render it on map with given coordinates
     // setView() is built in function of Leaflet JS
-   
+
     this.#map.setView(workout.coords, this.#mapZoomLevel, {
       animate: true,
-      pan:{
-        duration: 1
-      }
-    })
-    
+      pan: {
+        duration: 1,
+      },
+    });
+  }
+
+  _saveToLocalStorage() {
+    // here we set data to localStorage API
+    // we need to convert object to JSON string
+    localStorage.setItem('workouts', JSON.stringify(this.#workouts));
+  }
+
+  _getFromLocalStorage() {
+    // get data from storage and convert it into object with JSON.parse() method
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return; // guard, if no data, return (close the method)
+
+    this.#workouts = data; // if there is data, save in #workouts variable
+
+    this.#workouts.forEach(wo => this._renderWorkout(wo)); // go through list and render workout
   }
 
   _renderWorkout(workout) {
@@ -265,6 +295,12 @@ class App {
     `;
 
     form.insertAdjacentHTML('afterend', html);
+  }
+
+  // reset method
+  reset(){
+    localStorage.removeItem('workouts'); // clear localStorage data
+    location.reload();  // reload page
   }
 }
 
